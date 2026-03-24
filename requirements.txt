@@ -1,0 +1,11 @@
+yfinance
+pandas
+numpy
+pyarrow
+ta
+loguru
+requests
+xgboost
+scikit-learn
+optuna
+joblib
