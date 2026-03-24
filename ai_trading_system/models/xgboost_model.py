@@ -23,37 +23,47 @@ class XGBoostModel:
         )
         self.feature_cols = None
 
-    def prepare_data(self, df: pd.DataFrame):
+    def prepare_data(self, df: pd.DataFrame, use_triple_barrier=False):
         """Prepare features and target labels."""
-        # Using same ATR target logic as RF model
-        k = settings.SWING_ATR_MULTIPLIER
-        df['forward_return_5d'] = df['Close'].shift(-5) / df['Close'] - 1.0
+        if use_triple_barrier:
+            # Assumes the triple_barrier logic was already applied in the data pipeline
+            if 'target_triple_barrier' not in df.columns:
+                logger.error("Triple barrier target not found. Did you run the apply_triple_barrier function?")
+                return pd.DataFrame(), pd.Series()
 
-        if 'ATR_14' not in df.columns:
-            logger.error("ATR_14 not found in features. Cannot generate ATR-based labels.")
-            return pd.DataFrame(), pd.Series()
+            df = df.dropna(subset=['target_triple_barrier'])
+            exclude_cols = ['Open', 'High', 'Low', 'Close', 'Volume', 'Adj Close', 'target_triple_barrier', 'VWAP_approx']
+            self.feature_cols = [c for c in df.columns if c not in exclude_cols]
+            X = df[self.feature_cols]
+            y = df['target_triple_barrier']
+        else:
+            # Using same ATR swing logic as RF model
+            k = settings.SWING_ATR_MULTIPLIER
+            df['forward_return_5d'] = df['Close'].shift(-5) / df['Close'] - 1.0
 
-        df['atr_pct'] = df['ATR_14'] / df['Close']
-        df['threshold'] = k * df['atr_pct']
+            if 'ATR_14' not in df.columns:
+                logger.error("ATR_14 not found in features. Cannot generate ATR-based labels.")
+                return pd.DataFrame(), pd.Series()
 
-        conditions = [
-            (df['forward_return_5d'] > df['threshold']),
-            (df['forward_return_5d'] < -df['threshold'])
-        ]
+            df['atr_pct'] = df['ATR_14'] / df['Close']
+            df['threshold'] = k * df['atr_pct']
 
-        # XGBoost requires target classes to start from 0 and be positive integers for multi-class classification
-        # so instead of -1, 0, 1 -> 0(Sell), 1(Hold), 2(Buy)
-        choices = [2, 0] # 2: BUY, 0: SELL
+            conditions = [
+                (df['forward_return_5d'] > df['threshold']),
+                (df['forward_return_5d'] < -df['threshold'])
+            ]
 
-        df['target'] = np.select(conditions, choices, default=1) # 1: HOLD
+            # 2: BUY, 0: SELL, 1: HOLD
+            choices = [2, 0]
 
-        df = df.dropna()
+            df['target'] = np.select(conditions, choices, default=1)
+            df = df.dropna()
 
-        exclude_cols = ['Open', 'High', 'Low', 'Close', 'Volume', 'Adj Close', 'forward_return_5d', 'threshold', 'atr_pct', 'target']
-        self.feature_cols = [c for c in df.columns if c not in exclude_cols]
+            exclude_cols = ['Open', 'High', 'Low', 'Close', 'Volume', 'Adj Close', 'forward_return_5d', 'threshold', 'atr_pct', 'target', 'VWAP_approx']
+            self.feature_cols = [c for c in df.columns if c not in exclude_cols]
 
-        X = df[self.feature_cols]
-        y = df['target']
+            X = df[self.feature_cols]
+            y = df['target']
 
         return X, y
 
@@ -86,3 +96,15 @@ class XGBoostModel:
         path = os.path.join(self.model_dir, name)
         joblib.dump({'model': self.model, 'features': self.feature_cols}, path)
         logger.info(f"Model saved to {path}")
+
+    def load_model(self, name="xgboost_baseline.pkl"):
+        path = os.path.join(self.model_dir, name)
+        if os.path.exists(path):
+            data = joblib.load(path)
+            self.model = data['model']
+            self.feature_cols = data['features']
+            logger.info(f"Model loaded from {path}")
+            return True
+        else:
+            logger.error(f"Model not found at {path}")
+            return False

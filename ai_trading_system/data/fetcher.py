@@ -27,7 +27,11 @@ class YFinanceFetcher:
 
         logger.info(f"Downloading {symbol} ({interval}) from {self.start_date}...")
         try:
-            df = yf.download(symbol, start=self.start_date, interval=interval, progress=False)
+            if interval in ['1m', '2m', '5m', '15m', '30m', '60m', '90m', '1h']:
+                # Intraday data limits in yfinance (max 60 days for 5m)
+                df = yf.download(symbol, period="60d", interval=interval, progress=False)
+            else:
+                df = yf.download(symbol, start=self.start_date, interval=interval, progress=False)
 
             # yfinance sometimes returns MultiIndex columns if one ticker is passed, flatten it
             if isinstance(df.columns, pd.MultiIndex):

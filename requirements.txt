@@ -9,3 +9,7 @@ xgboost
 scikit-learn
 optuna
 joblib
+streamlit
+stable-baselines3
+gymnasium
+shimmy
