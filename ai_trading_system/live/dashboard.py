@@ -3,6 +3,11 @@ import pandas as pd
 import time
 from datetime import datetime
 import pytz
+import sys
+import os
+
+# Automatically add the ai_trading_system directory to the path so Streamlit can find imports
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from live.predictor import LiveIntradayPredictor
 

@@ -20,11 +20,9 @@ def setup_logger():
 def fetch_data() -> Dict[str, pd.DataFrame]:
     """Phase 1: Fetch raw OHLCV data."""
     logger.info("=== PHASE 1: DATA FETCHING ===")
-    # Using testing set to fit within memory/time limits for the dry run
     fetcher = YFinanceFetcher(start_date=settings.TESTING_START_DATE)
 
-    # We will test the loop on the first 5 trading stocks + Market Context
-    test_symbols = settings.TRADING_STOCKS[:5] + ["^NSEI", "^INDIAVIX"]
+    test_symbols = settings.TRADING_STOCKS + ["^NSEI", "^INDIAVIX"]
     raw_data = fetcher.fetch_all(symbols=test_symbols, interval="1d", force_refresh=False)
 
     logger.info(f"Fetched {len(raw_data)} symbols.")

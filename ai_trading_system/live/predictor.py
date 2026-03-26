@@ -16,7 +16,7 @@ class LiveIntradayPredictor:
     Connects to live market data (yfinance 5m candles), runs the 55 feature pipeline,
     and queries the trained XGBoost model for immediate intraday signals.
     """
-    def __init__(self, symbols=settings.TRADING_STOCKS[:5]):
+    def __init__(self, symbols=settings.TRADING_STOCKS):
         self.symbols = symbols
         self.fetcher = YFinanceFetcher()
         self.model = XGBoostModel()

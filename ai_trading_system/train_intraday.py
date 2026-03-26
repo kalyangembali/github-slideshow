@@ -24,8 +24,7 @@ def fetch_intraday_data() -> Dict[str, pd.DataFrame]:
     logger.info("=== PHASE 1: INTRADAY DATA FETCHING (5m) ===")
     fetcher = YFinanceFetcher(start_date=settings.TESTING_START_DATE)
 
-    # We will test the loop on the first 5 trading stocks + Market Context
-    test_symbols = settings.TRADING_STOCKS[:5]
+    test_symbols = settings.TRADING_STOCKS
     raw_data = fetcher.fetch_all(symbols=test_symbols, interval="5m", force_refresh=True)
 
     logger.info(f"Fetched {len(raw_data)} symbols.")
